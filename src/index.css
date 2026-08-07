@@ -5,9 +5,9 @@
   --bg-input: #1d1d1d;
   --border: #2a2a2a;
   --border-strong: #3a3a3a;
-  --gold: #d4af37;
-  --gold-bright: #f0c94a;
-  --gold-dim: #8a712a;
+  --accent: #00C805;
+  --accent-bright: #00E006;
+  --accent-dim: #017a03;
   --text: #f2f0ea;
   --text-dim: #a8a29a;
   --text-faint: #6f6a62;
@@ -31,7 +31,7 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% -10%, #1a1710 0%, var(--bg) 45%);
+  background: radial-gradient(circle at 50% -10%, #0c1a0f 0%, var(--bg) 45%);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
@@ -76,8 +76,8 @@ a {
   letter-spacing: 0.02em;
 }
 
-.brand-name-gold {
-  color: var(--gold);
+.brand-name-accent {
+  color: var(--accent);
 }
 
 .nav {
@@ -101,8 +101,8 @@ a {
 }
 
 .nav a.active {
-  color: var(--gold);
-  background: rgba(212, 175, 55, 0.1);
+  color: var(--accent);
+  background: rgba(0, 200, 5, 0.1);
 }
 
 /* ---------------- Buttons ---------------- */
@@ -120,7 +120,7 @@ a {
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--gold-dim);
+  border-color: var(--accent-dim);
 }
 
 .btn:disabled {
@@ -129,14 +129,14 @@ a {
 }
 
 .btn-primary {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: #14110a;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04160a;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--gold-bright);
-  border-color: var(--gold-bright);
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
 }
 
 .btn-block {
@@ -294,7 +294,7 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
   flex-shrink: 0;
 }
 
@@ -312,7 +312,7 @@ a {
   border-radius: 10px;
   background: var(--bg-card);
   border: 4px solid var(--bg);
-  color: var(--gold);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -375,9 +375,9 @@ a {
 }
 
 .slippage-chip.active {
-  border-color: var(--gold);
-  color: var(--gold);
-  background: rgba(212, 175, 55, 0.08);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 200, 5, 0.08);
 }
 
 .slippage-chip-input {
@@ -445,9 +445,9 @@ a {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(212, 175, 55, 0.12);
-  color: var(--gold);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(0, 200, 5, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(0, 200, 5, 0.3);
 }
 
 .badge-derived {
@@ -504,7 +504,7 @@ a {
 
 .text-input:focus,
 .select-input:focus {
-  border-color: var(--gold-dim);
+  border-color: var(--accent-dim);
 }
 
 .link-back {
@@ -516,7 +516,7 @@ a {
 }
 
 .link-back:hover {
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .spinner {
@@ -555,7 +555,7 @@ a {
 
 .tab.active {
   background: var(--bg-card);
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .footer {

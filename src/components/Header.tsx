@@ -9,7 +9,7 @@ export default function Header() {
         <div className="brand">
           <Logo />
           <span>
-            Infinite <span className="brand-name-gold">Ledgers</span>
+            Infinite <span className="brand-name-accent">Ledgers</span>
           </span>
         </div>
         <nav className="nav">
