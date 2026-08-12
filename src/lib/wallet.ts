@@ -12,12 +12,13 @@ import {
   RPC_ENDPOINT,
 } from "../config/chain";
 
-export type WalletId = "keplr" | "leap" | "cosmostation";
+export type WalletId = "keplr" | "leap" | "cosmostation" | "infiniteledgers";
 
 export const SUPPORTED_WALLETS: { id: WalletId; label: string }[] = [
   { id: "keplr", label: "Keplr" },
   { id: "leap", label: "Leap" },
   { id: "cosmostation", label: "Cosmostation" },
+  { id: "infiniteledgers", label: "Infinite Ledgers Wallet" },
 ];
 
 export class WalletNotFoundError extends Error {
@@ -49,6 +50,8 @@ function getInjectedWallet(id: WalletId): InjectedCosmosWallet | undefined {
     case "cosmostation":
       // Cosmostation exposes a Keplr-compatible surface under providers.keplr.
       return w.cosmostation?.providers?.keplr;
+    case "infiniteledgers":
+      return w.infiniteledgers;
     default:
       return undefined;
   }

@@ -56,7 +56,33 @@ export default function ConnectWalletButton() {
               </button>
             );
           })}
-          {error && <div className="error-text">{error}</div>}
+        </div>
+      )}
+      {/*
+        Deliberately OUTSIDE the `open &&` block above: the wallet buttons
+        call setOpen(false) immediately on click, before awaiting connect(),
+        so `open` is already false by the time a failed connect() sets
+        `error`. An error div nested inside `open && (...)` would never
+        render -- every connection failure (wrong extension not found, no
+        wallet set up yet, user rejected, ...) would look like the dropdown
+        just silently closing with zero feedback. Shown only while the
+        dropdown itself is closed so it doesn't overlap the open list, and
+        it clears naturally the next time the user reopens the dropdown to
+        retry.
+      */}
+      {!open && error && (
+        <div
+          className="card error-text"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: "calc(100% + 8px)",
+            width: 220,
+            zIndex: 20,
+            padding: "10px 12px",
+          }}
+        >
+          {error}
         </div>
       )}
     </div>
