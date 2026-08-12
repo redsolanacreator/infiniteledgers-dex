@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePools } from "../context/PoolsContext";
-import { tokenDecimals, tokenLabel } from "../config/chain";
+import { AMM_CONTRACTS, tokenDecimals, tokenLabel } from "../config/chain";
 import { formatNumber, toDisplayUnits } from "../lib/format";
 import { getAtomUsdPrice } from "../lib/coingecko";
 
@@ -14,6 +14,7 @@ export default function PoolsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [denomA, setDenomA] = useState("");
   const [denomB, setDenomB] = useState("");
+  const [addContractId, setAddContractId] = useState(AMM_CONTRACTS[0].id);
   const [atomUsd, setAtomUsd] = useState<number | null>(null);
 
   useEffect(() => {
@@ -59,6 +60,20 @@ export default function PoolsPage() {
               browser).
             </p>
             <div className="form-row">
+              <label className="form-label">Contract</label>
+              <select
+                className="select-input"
+                value={addContractId}
+                onChange={(e) => setAddContractId(e.target.value)}
+              >
+                {AMM_CONTRACTS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label} ({c.address.slice(0, 10)}…)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-row">
               <label className="form-label">Denom A</label>
               <input
                 className="text-input"
@@ -80,7 +95,7 @@ export default function PoolsPage() {
               className="btn btn-primary"
               disabled={!denomA.trim() || !denomB.trim()}
               onClick={() => {
-                addCustomPair(denomA, denomB);
+                addCustomPair(addContractId, denomA, denomB);
                 setDenomA("");
                 setDenomB("");
                 setShowAdd(false);
@@ -96,6 +111,7 @@ export default function PoolsPage() {
             <thead>
               <tr>
                 <th>Pool</th>
+                <th>Contract</th>
                 <th>Reserves</th>
                 <th>Spot price</th>
                 <th>LP supply</th>
@@ -114,6 +130,16 @@ export default function PoolsPage() {
                     <td>
                       <span className="pill">
                         {tokenLabel(entry.denomA)} / {tokenLabel(entry.denomB)}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          entry.contractId === "single-sided" ? "badge-contract-alt" : "badge-contract"
+                        }`}
+                        title={entry.contractAddress}
+                      >
+                        {entry.contractLabel}
                       </span>
                     </td>
                     <td>
@@ -160,7 +186,7 @@ export default function PoolsPage() {
               })}
               {pools.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="empty-state">
+                  <td colSpan={6} className="empty-state">
                     No pools tracked yet.
                   </td>
                 </tr>
@@ -170,11 +196,14 @@ export default function PoolsPage() {
         </div>
 
         <p className="note" style={{ marginTop: 14 }}>
-          Reserves, spot price, and LP supply come directly from the contract's
-          GetPool / GetPrice queries — nothing here is simulated. "Est. value" only
-          appears for the ATOM pool and is explicitly a derived estimate (pool ratio
-          × ATOM's live CoinGecko price), never a direct feed — INF and BabyINF have
-          no external market, so no USD figure is shown for them.
+          Reserves, spot price, and LP supply come directly from each pool's own
+          contract via its GetPool / GetPrice queries — nothing here is simulated.
+          "Est. value" only appears for ATOM pools and is explicitly a derived
+          estimate (pool ratio × ATOM's live CoinGecko price), never a direct feed —
+          INF and BabyINF have no external market, so no USD figure is shown for them.
+          The <strong>Contract</strong> column shows which of the two separate AMM
+          deployments each pool lives in — they are independent contracts with
+          independent liquidity, even when they happen to list the same pair.
         </p>
       </div>
     </div>

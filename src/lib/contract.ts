@@ -1,11 +1,15 @@
 import { CosmWasmClient, SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
-import type { Coin } from "@cosmjs/stargate";
-import {
-  AMM_CONTRACT_ADDRESS,
-  GAS_PRICE_STEP,
-  RPC_ENDPOINT,
-} from "../config/chain";
+import { calculateFee, GasPrice } from "@cosmjs/stargate";
+import type { Coin, StdFee } from "@cosmjs/stargate";
+import type { EncodeObject } from "@cosmjs/proto-signing";
+import { GAS_PRICE_STEP, NATIVE_DENOM, RPC_ENDPOINT } from "../config/chain";
 import type { PoolInfo, SwapSimulation } from "../types/contract";
+
+// Every query/execute below takes the target contract's address as an
+// explicit parameter rather than assuming a single global AMM contract --
+// there are now two separate, independently-deployed contracts (see
+// AMM_CONTRACTS in config/chain.ts), each with its own pools and
+// liquidity. Callers pick which one to talk to.
 
 let readClient: CosmWasmClient | null = null;
 let readClientPromise: Promise<CosmWasmClient> | null = null;
@@ -60,12 +64,13 @@ function pick(obj: any, keys: string[]): string | undefined {
 }
 
 export async function queryPool(
+  contractAddress: string,
   denomA: string,
   denomB: string
 ): Promise<PoolInfo | null> {
   const client = await getReadClient();
   try {
-    const res = await client.queryContractSmart(AMM_CONTRACT_ADDRESS, {
+    const res = await client.queryContractSmart(contractAddress, {
       get_pool: { denom_a: denomA, denom_b: denomB },
     });
     let reserveA =
@@ -103,12 +108,13 @@ export async function queryPool(
 }
 
 export async function queryPrice(
+  contractAddress: string,
   denomIn: string,
   denomOut: string
 ): Promise<string | null> {
   const client = await getReadClient();
   try {
-    const res = await client.queryContractSmart(AMM_CONTRACT_ADDRESS, {
+    const res = await client.queryContractSmart(contractAddress, {
       get_price: { denom_in: denomIn, denom_out: denomOut },
     });
     if (typeof res === "string" || typeof res === "number") return String(res);
@@ -119,6 +125,7 @@ export async function queryPrice(
 }
 
 export async function simulateSwap(
+  contractAddress: string,
   denomIn: string,
   amountInBase: string,
   denomOut: string
@@ -126,7 +133,7 @@ export async function simulateSwap(
   if (!amountInBase || amountInBase === "0") return null;
   const client = await getReadClient();
   try {
-    const res = await client.queryContractSmart(AMM_CONTRACT_ADDRESS, {
+    const res = await client.queryContractSmart(contractAddress, {
       simulate_swap: {
         denom_in: denomIn,
         amount_in: amountInBase,
@@ -136,6 +143,24 @@ export async function simulateSwap(
     const amountOut =
       pick(res, ["amount_out", "amountOut", "out_amount", "output"]) ?? "0";
     return { amountOut, raw: res };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Live wallet balance for one denom, in base units. Returns null (not "0")
+ * on any query failure so the UI can distinguish "confirmed zero balance"
+ * from "couldn't check" rather than showing a fabricated number.
+ */
+export async function queryBalance(
+  address: string,
+  denom: string
+): Promise<string | null> {
+  try {
+    const client = await getReadClient();
+    const coin = await client.getBalance(address, denom);
+    return coin.amount;
   } catch {
     return null;
   }
@@ -160,6 +185,7 @@ export async function simulateSwap(
  * the same way queryPool/simulateSwap do it above.
  */
 export async function queryLpBalance(
+  _contractAddress: string,
   _poolId: string | null,
   _address: string
 ): Promise<string | null> {
@@ -178,9 +204,76 @@ function sortedFunds(funds: Coin[]): Coin[] {
 
 export const DEFAULT_GAS_PRICE = `${GAS_PRICE_STEP.average}minf`;
 
+function swapGasPrice(): GasPrice {
+  return GasPrice.fromString(`${GAS_PRICE_STEP.average}${NATIVE_DENOM}`);
+}
+
+// Conservative gas-limit guess for a single AMM swap execute call, used only
+// as a fallback fee estimate when a live simulate() isn't available (e.g.
+// the Max button before any amount is typed, or simulate() itself fails --
+// which it legitimately will if the typed amount exceeds the sender's
+// balance, since simulation actually runs the contract's fund transfer).
+const FALLBACK_SWAP_GAS = 250_000;
+
+export function fallbackSwapFee(): StdFee {
+  return calculateFee(FALLBACK_SWAP_GAS, swapGasPrice());
+}
+
+export interface SwapFeeEstimate {
+  fee: StdFee;
+  /** true if `fee` came from a live simulate() against current chain state; false if it's the static fallback. */
+  simulated: boolean;
+}
+
+/**
+ * Pre-submit fee estimate for a swap. SigningCosmWasmClient.execute(...,
+ * "auto", ...) already does exactly this internally (simulate for a gas
+ * estimate, apply its own defaultGasMultiplier of 1.4, price it with the
+ * client's configured GasPrice) but keeps the result private -- this
+ * mirrors that same logic so the UI can show the number *before* the user
+ * confirms, using the identical message shape executeSwap() would submit.
+ */
+export async function estimateSwapFee(
+  client: SigningCosmWasmClient,
+  sender: string,
+  contractAddress: string,
+  denomIn: string,
+  amountInBase: string,
+  denomOut: string,
+  minAmountOutBase: string
+): Promise<SwapFeeEstimate> {
+  const gasPrice = swapGasPrice();
+  try {
+    const msg = {
+      swap: {
+        denom_in: denomIn,
+        amount_in: amountInBase,
+        denom_out: denomOut,
+        min_amount_out: minAmountOutBase,
+      },
+    };
+    const funds = sortedFunds([{ denom: denomIn, amount: amountInBase }]);
+    const encodeObject: EncodeObject = {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: {
+        sender,
+        contract: contractAddress,
+        msg: new TextEncoder().encode(JSON.stringify(msg)),
+        funds,
+      },
+    };
+    const gasEstimate = await client.simulate(sender, [encodeObject], undefined);
+    const gasLimit = Math.ceil(gasEstimate * 1.4); // matches cosmjs's own defaultGasMultiplier
+    return { fee: calculateFee(gasLimit, gasPrice), simulated: true };
+  } catch {
+    return { fee: fallbackSwapFee(), simulated: false };
+  }
+}
+
 export async function executeSwap(
   client: SigningCosmWasmClient,
   sender: string,
+  contractAddress: string,
   denomIn: string,
   amountInBase: string,
   denomOut: string,
@@ -195,12 +288,13 @@ export async function executeSwap(
     },
   };
   const funds = sortedFunds([{ denom: denomIn, amount: amountInBase }]);
-  return client.execute(sender, AMM_CONTRACT_ADDRESS, msg, "auto", undefined, funds);
+  return client.execute(sender, contractAddress, msg, "auto", undefined, funds);
 }
 
 export async function executeAddLiquidity(
   client: SigningCosmWasmClient,
   sender: string,
+  contractAddress: string,
   denomA: string,
   amountABase: string,
   denomB: string,
@@ -211,25 +305,45 @@ export async function executeAddLiquidity(
     { denom: denomA, amount: amountABase },
     { denom: denomB, amount: amountBBase },
   ]);
-  return client.execute(sender, AMM_CONTRACT_ADDRESS, msg, "auto", undefined, funds);
+  return client.execute(sender, contractAddress, msg, "auto", undefined, funds);
+}
+
+/**
+ * Single-sided liquidity deposit -- only the newer AMM contract supports
+ * this (see AmmContractConfig.supportsSingleSided in config/chain.ts).
+ * Deposits one denom only; the contract handles balancing it into the
+ * pool itself rather than requiring a matched pair up front.
+ */
+export async function executeAddLiquiditySingleSided(
+  client: SigningCosmWasmClient,
+  sender: string,
+  contractAddress: string,
+  denom: string,
+  amountBase: string
+) {
+  const msg = { add_liquidity_single_sided: { denom } };
+  const funds = sortedFunds([{ denom, amount: amountBase }]);
+  return client.execute(sender, contractAddress, msg, "auto", undefined, funds);
 }
 
 export async function executeRemoveLiquidity(
   client: SigningCosmWasmClient,
   sender: string,
+  contractAddress: string,
   poolId: string,
   lpAmountBase: string
 ) {
   const msg = { remove_liquidity: { pool_id: poolId, lp_amount: lpAmountBase } };
-  return client.execute(sender, AMM_CONTRACT_ADDRESS, msg, "auto");
+  return client.execute(sender, contractAddress, msg, "auto");
 }
 
 export async function executeCreatePool(
   client: SigningCosmWasmClient,
   sender: string,
+  contractAddress: string,
   denomA: string,
   denomB: string
 ) {
   const msg = { create_pool: { denom_a: denomA, denom_b: denomB } };
-  return client.execute(sender, AMM_CONTRACT_ADDRESS, msg, "auto");
+  return client.execute(sender, contractAddress, msg, "auto");
 }

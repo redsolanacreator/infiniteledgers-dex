@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { usePools } from "../context/PoolsContext";
 import { useWallet } from "../context/WalletContext";
 import { tokenDecimals, tokenLabel } from "../config/chain";
-import { formatNumber, toDisplayUnits } from "../lib/format";
+import { formatNumber, shortenAddress, toDisplayUnits } from "../lib/format";
 import { queryLpBalance } from "../lib/contract";
 
 export default function PoolDetailPage() {
@@ -21,7 +21,9 @@ export default function PoolDetailPage() {
       return;
     }
     setLpBalance("loading");
-    queryLpBalance(entry.pool?.poolId ?? null, session.address).then(setLpBalance);
+    queryLpBalance(entry.contractAddress, entry.pool?.poolId ?? null, session.address).then(
+      setLpBalance
+    );
   }, [session, entry]);
 
   if (!entry) {
@@ -39,7 +41,7 @@ export default function PoolDetailPage() {
     );
   }
 
-  const { denomA, denomB, pool, price } = entry;
+  const { denomA, denomB, pool, price, contractId, contractAddress, contractLabel } = entry;
 
   return (
     <div className="page">
@@ -50,6 +52,14 @@ export default function PoolDetailPage() {
         <h1 className="page-title">
           {tokenLabel(denomA)} / {tokenLabel(denomB)}
         </h1>
+        <p className="note" style={{ marginBottom: 14 }}>
+          On the{" "}
+          <span className={`badge ${contractId === "single-sided" ? "badge-contract-alt" : "badge-contract"}`}>
+            {contractLabel}
+          </span>{" "}
+          contract ({shortenAddress(contractAddress)}). Pools with the same pair on a
+          different contract are entirely separate liquidity, not the same pool.
+        </p>
 
         <div className="card">
           {!pool ? (

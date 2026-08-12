@@ -5,6 +5,8 @@ import SwapPage from "./pages/SwapPage";
 import PoolsPage from "./pages/PoolsPage";
 import PoolDetailPage from "./pages/PoolDetailPage";
 import LiquidityPage from "./pages/LiquidityPage";
+import { AMM_CONTRACTS } from "./config/chain";
+import { shortenAddress } from "./lib/format";
 
 export default function App() {
   return (
@@ -20,8 +22,13 @@ export default function App() {
         <Route path="*" element={<Navigate to="/swap" replace />} />
       </Routes>
       <footer className="footer">
-        Infinite Ledgers · {`infiniteledgers-1`} · AMM contract{" "}
-        inf1nc5t…knfe8
+        Infinite Ledgers · {`infiniteledgers-1`} · AMM contracts:{" "}
+        {AMM_CONTRACTS.map((c, i) => (
+          <span key={c.id}>
+            {i > 0 ? " · " : ""}
+            {c.label} {shortenAddress(c.address, 7, 5)}
+          </span>
+        ))}
       </footer>
     </div>
   );

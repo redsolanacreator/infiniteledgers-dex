@@ -266,6 +266,31 @@ a {
   justify-content: space-between;
 }
 
+.swap-field.insufficient {
+  border-color: var(--red);
+}
+
+.balance-row {
+  color: var(--text-dim);
+  align-items: center;
+}
+
+.max-chip {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.max-chip:hover {
+  border-color: var(--accent);
+  background: rgba(0, 200, 5, 0.08);
+}
+
 .token-select {
   display: flex;
   align-items: center;
@@ -342,6 +367,19 @@ a {
 
 .swap-details-row .label {
   color: var(--text-faint);
+}
+
+.swap-details-total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.swap-details-total .label {
+  color: var(--text-dim);
+  font-weight: 600;
 }
 
 .impact-warn {
@@ -454,6 +492,42 @@ a {
   background: rgba(168, 162, 154, 0.12);
   color: var(--text-dim);
   border-color: var(--border-strong);
+}
+
+.badge-contract {
+  background: rgba(88, 145, 255, 0.12);
+  color: #6ea1ff;
+  border-color: rgba(88, 145, 255, 0.3);
+}
+
+.badge-contract-alt {
+  background: rgba(200, 120, 255, 0.12);
+  color: #c082ff;
+  border-color: rgba(200, 120, 255, 0.3);
+}
+
+.contract-select-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.contract-select-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.contract-select-chip.active {
+  background: rgba(88, 145, 255, 0.12);
+  color: #6ea1ff;
+  border-color: rgba(88, 145, 255, 0.4);
 }
 
 .empty-state {
