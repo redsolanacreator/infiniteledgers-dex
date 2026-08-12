@@ -6,3 +6,10 @@ dist-ssr
 .env.local
 npm-debug.log*
 .DS_Store
+
+# tsc -b (tsconfig.node.json) compiles vite.config.ts to JS in place --
+# Vite prefers a same-directory vite.config.js over the .ts source when
+# both exist, so a stale compiled copy silently shadows real config edits.
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
